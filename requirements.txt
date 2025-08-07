@@ -1,0 +1,6 @@
+pandas
+dotenv
+langchain_google_genai
+langchain
+fastapi
+uvicorn
