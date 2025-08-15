@@ -4,3 +4,10 @@ langchain_google_genai
 langchain
 fastapi
 uvicorn
+langchain_openai
+langchain_community
+datasets
+pinecone
+pymysql
+sqlmodel
+

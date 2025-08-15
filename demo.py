@@ -9,7 +9,7 @@ apiKey = os.getenv("GOOGLE_API_KEY")
 
 llm = ChatGoogleGenerativeAI(
     model="gemini-1.5-flash-latest",
-    temperature=0.2
+    temperature=0.3
 )
 
 def load_and_prepare_price_context(file_path: str, province: str) -> str:
