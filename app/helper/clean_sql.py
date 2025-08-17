@@ -1,4 +1,28 @@
-import re
+import re, json
+
+
+
+def parse_route_safely(raw: str) -> str:
+    # Ambil objek {...} pertama (menghindari ```json ... ``` dan embel-embel lain)
+    m = re.search(r"\{.*?\}", raw, flags=re.S)
+    if m:
+        try:
+            data = json.loads(m.group(0))
+            route = str(data.get("route", "")).strip().lower()
+            if route in {"sql", "rag", "both"}:
+                return route
+        except Exception:
+            pass
+    # Heuristik darurat kalau JSON gagal tapi kata kunci kebaca
+    low = raw.lower()
+    if '"rag"' in low or " route " in low and "rag" in low:
+        return "rag"
+    if '"both"' in low or "both" in low:
+        return "both"
+    if '"sql"' in low or "sql" in low:
+        return "sql"
+    # Default paling aman (pilih yang minim side-effect)
+    return "rag"  # ← lebih aman daripada "sql" supaya gak manggil extract_select tanpa perlu
 
 def extract_select(sql: str) -> str:
     sql = re.sub(r"^```[\w-]*\s*", "", sql.strip(), flags=re.IGNORECASE)

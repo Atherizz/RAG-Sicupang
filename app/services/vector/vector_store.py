@@ -1,18 +1,20 @@
-import os
+import os, uuid
 import time
 from dotenv import load_dotenv
 from pinecone import Pinecone
 from langchain_openai import OpenAIEmbeddings
-from datasets import load_dataset
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_pinecone import PineconeVectorStore
 from app.services.vector.load_pinecone import loadPinecone
 
 load_dotenv()
 pineconeApiKey = os.getenv("PINECONE_API_KEY")
 openAIApiKey = os.getenv("OPENAI_API_KEY")
 
-dataset = load_dataset("IzzulGod/indonesian-conversation", split="train")
-
-index_name = "alora-rag-small"
+pdf_path = "data/Indeks Ketahanan Pangan Tahun 2023.pdf"
+namespace = "docs"
+index_name = "sicupang-rag-small"
 model_name = "text-embedding-3-small"
 dimension = 1536
 
@@ -22,36 +24,38 @@ index = loadPinecone(index_name, dimension)
 
 embed_model = OpenAIEmbeddings(model=model_name)
 
-batch_size = 100
-batch_texts, batch_ids, batch_metadatas = [], [], []
+loader = PyPDFLoader(pdf_path)
+docs = loader.load()
 
-for i, row in enumerate(dataset):
-    messages = row["messages"]
-    for j, msg in enumerate(messages):
-        content = msg.get("content", "")
-        if not content:
-            continue
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1200, chunk_overlap=200,
+    separators=["\n\n", "\n", ".", " "]
+)
 
-        batch_ids.append(f"conv{i}_msg{j}")
-        batch_texts.append(content)
-        batch_metadatas.append(
-            {
-                "role": msg.get("role", ""),
-                "conversation_id": i,
-                "message_order": j,
-                "content" : content[:4000].strip()
-            }
-        )
+splits = splitter.split_documents(docs)
 
-        if len(batch_texts) >= batch_size:
-            embeds = embed_model.embed_documents(batch_texts)
-            index.upsert(vectors=list(zip(batch_ids, embeds, batch_metadatas)))
-            batch_texts, batch_ids, batch_metadatas = [], [], []
+for d in splits:
+    d.metadata.update({
+        "doc_type": "policy",
+        "title": "Indeks Ketahanan Pangan 2023",
+        "jurisdiction": "Kabupaten Malang",
+        "year": 2023,
+        "source_id": f"{os.path.basename(pdf_path)}#p{d.metadata.get('page', 0)}",
+        "tags": ["ikp", "indeks ketahanan pangan"]
+    })
 
-if batch_texts:
-    embeds = embed_model.embed_documents(batch_texts)
-    index.upsert(vectors=list(zip(batch_ids, embeds, batch_metadatas)))
-    
+# 3) vectorstore (auto-embed + batch upsert)
+vectorstore = PineconeVectorStore(
+    index_name=index_name,
+    embedding=embed_model,
+    namespace=namespace,
+    text_key="text"
+)
+
+ids = [str(uuid.uuid4()) for _ in range(len(splits))]
+vectorstore.add_documents(documents=splits, ids=ids, batch_size=64)
+
+
     
     
     
