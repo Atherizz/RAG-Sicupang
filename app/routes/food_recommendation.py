@@ -10,6 +10,7 @@ class IngredientInput(BaseModel):
     budget: int
     alergi: str
     
+    
 
 @router.post("/ingredient-recommend")
 def get_recommendation(input: IngredientInput):
