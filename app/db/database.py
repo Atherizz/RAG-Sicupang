@@ -6,25 +6,24 @@ import os
 
 load_dotenv()
 
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_NAME = os.getenv("DB_NAME")
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-
-mysql_url = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-
-engine = create_engine(mysql_url, echo=True)
-
-def get_sql_database():
-    db = SQLDatabase.from_uri(mysql_url)
-    return db
-
-def get_session():
-    with Session(engine) as session:
-        yield session
-
-def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
+class DBService:
+    def __init__(self):
+        self.DB_USER = os.getenv("DB_USER")
+        self.DB_PASSWORD = os.getenv("DB_PASSWORD")
+        self.DB_NAME = os.getenv("DB_NAME")
+        self.DB_HOST = os.getenv("DB_HOST")
+        self.DB_PORT = os.getenv("DB_PORT")
+        self.mysql_url = f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        self.engine = create_engine(self.mysql_url, echo=True)
+        
+    def get_sql_database(self):
+        db = SQLDatabase.from_uri(self.mysql_url)
+        return db
     
-print(get_sql_database())
+    def get_session(self):
+        with Session(self.engine) as session:
+            yield session
+            
+    def create_db_and_tables(self):
+        SQLModel.metadata.create_all(self.engine)
+        

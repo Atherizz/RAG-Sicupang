@@ -1,7 +1,7 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import create_sql_query_chain
 from langchain_core.output_parsers import StrOutputParser
-from app.db.database import get_sql_database
+from app.db.database import DBService
 from langchain_openai import ChatOpenAI
 from langchain_pinecone import PineconeVectorStore
 from langchain_openai import OpenAIEmbeddings
@@ -31,7 +31,7 @@ class Chatbot:
             text_key=self.text_field,
             namespace="docs"
         )
-        self.db = get_sql_database()
+        self.db = DBService().get_sql_database()
 
         self.write_query = create_sql_query_chain(self.llm, self.db)
         

@@ -7,7 +7,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import create_sql_query_chain
 from langchain.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
-from app.db.database import get_sql_database
+from app.db.database import DBService
 from app.helper.clean_sql import extract_select, sanitize_sql
 from langchain_core.output_parsers import StrOutputParser
 
@@ -29,7 +29,7 @@ class IngredientRecommend:
         # temperature=0.4
         # )
 
-        self.db = get_sql_database()
+        self.db = DBService().get_sql_database()
         self.write_query = create_sql_query_chain(self.llm, self.db)
 
         self.prompt_template_recommendation = PromptTemplate(
