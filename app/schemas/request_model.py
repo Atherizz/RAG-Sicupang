@@ -10,5 +10,5 @@ class FoodBatchRequest(BaseModel):
     items: List[FoodInput]
     
 class FoodExtract(BaseModel):
-    food_name: str
+    food_name: List[str]
     

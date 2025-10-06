@@ -11,4 +11,5 @@ datasets
 pinecone
 pymysql
 sqlmodel
-
+fuzzywuzzy 
+python-levenshtein

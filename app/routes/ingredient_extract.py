@@ -11,7 +11,13 @@ db = DBService()
 
     
 @router.post("/ingredient-extract")
-async def ingredient_extract(request: FoodExtract, session: Session = Depends(db.get_session)):
+async def ingredient_extract(request: FoodBatchRequest, session: Session = Depends(db.get_session)):
     svc = IngredientExtract()
-    results = await svc.build_augmented_message(request.food_name, session=session) 
+    results = await svc.searchingFood(request.items, request.family_id, session)
+    return {"response": results}
+
+@router.post("/ai-extract")
+async def ai_extract(request: FoodExtract, session: Session = Depends(db.get_session)):
+    svc = IngredientExtract()
+    results = await svc.build_augmented_message_bulk(request.food_name, session)
     return {"response": results}
