@@ -5,6 +5,8 @@ from sqlmodel import SQLModel, Field, Session
 from sqlalchemy import Column
 from sqlalchemy.types import Numeric, Date
 
+from .family import Family 
+
 class HouseholdFood(SQLModel, table=True):
     __tablename__ = "pangan_keluarga"
     __table_args__ = {"extend_existing": True}  

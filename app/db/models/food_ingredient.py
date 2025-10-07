@@ -7,9 +7,7 @@ from fuzzywuzzy import fuzz
 from fuzzywuzzy import process 
 
 
-# VARIABEL GLOBAL CACHE: Diinisialisasi None, akan diisi saat pertama kali diakses.
 _CACHED_PANGAN_NAMES: Optional[List[str]] = None
-
 
 class FoodIngredient(SQLModel, table=True):
     __tablename__ = "pangan"
@@ -41,14 +39,10 @@ class FoodIngredient(SQLModel, table=True):
         sa_column=Column(Numeric(10, 2), nullable=False)
     )
     
-FUZZY_SCORE_THRESHOLD = 70
+FUZZY_SCORE_THRESHOLD = 80
 
 
 def _load_pangan_names(session: Session) -> List[str]:
-    """
-    Mengambil semua nama pangan dari database dan menyimpannya di cache global.
-    Hanya berjalan saat _CACHED_PANGAN_NAMES masih None.
-    """
     global _CACHED_PANGAN_NAMES
     
     if _CACHED_PANGAN_NAMES is not None:
@@ -63,10 +57,6 @@ def _load_pangan_names(session: Session) -> List[str]:
 
 
 def get_pangan_by_nama_fuzzy(nama_pangan: str, session: Session) -> Optional[FoodIngredient]:
-    """
-    Mencari FoodIngredient yang nama pangannya paling mirip menggunakan fuzzy matching.
-    Menggunakan cache global untuk daftar nama pangan (all_pangan_names).
-    """
     
     all_pangan_names = _load_pangan_names(session)
 
@@ -76,7 +66,7 @@ def get_pangan_by_nama_fuzzy(nama_pangan: str, session: Session) -> Optional[Foo
     best_match: Optional[Tuple[str, int]] = process.extractOne(
         nama_pangan, 
         all_pangan_names, 
-        scorer=fuzz.ratio
+        scorer=fuzz.token_set_ratio 
     )
 
     if best_match is None:
@@ -84,12 +74,11 @@ def get_pangan_by_nama_fuzzy(nama_pangan: str, session: Session) -> Optional[Foo
 
     best_name, score = best_match
 
-    if score >= FUZZY_SCORE_THRESHOLD:
+    if score >= FUZZY_SCORE_THRESHOLD: 
         statement = select(FoodIngredient).where(FoodIngredient.nama_pangan == best_name)
         return session.exec(statement).first()
     else:
         return None
-
 
 def get_pangan_by_nama_like(nama_pangan: str, session: Session) -> Optional[List['FoodIngredient']]:
     search_pattern = f"%{nama_pangan}%"

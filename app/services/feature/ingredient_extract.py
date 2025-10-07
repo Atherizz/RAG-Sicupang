@@ -61,6 +61,7 @@ class IngredientExtract:
         temp_results = []
 
         for bahan in bahan_parsed:
+            nama_bahan = bahan.get("nama_bahan", 0)
             berat_konsumsi = bahan.get("jumlah_standar", 0) * faktor_skala
             berat_per_urt = bahan.get("berat_per_urt", 0) 
             id_pangan = bahan.get("id_pangan", None)
@@ -87,11 +88,12 @@ class IngredientExtract:
                 )
 
                 temp_results.append({
-                    "food": food_name,
-                    "id_pangan": inserted_record.id_pangan,
-                    "urt": float(inserted_record.urt),
-                    "status": "Sukses Insert"
-                })
+                        "food_name" : food_name,
+                        "ingredient_name": nama_bahan,
+                        "id_pangan": inserted_record.id_pangan,
+                        "urt": float(inserted_record.urt),
+                        "status": "Sukses Insert"
+                    })
             except Exception as e:
                 print(f"❌ Gagal insert data {id_pangan} untuk {food_name}: {e}")
                 
@@ -176,7 +178,8 @@ class IngredientExtract:
                     )
                     
                     temp_results.append({
-                        "food": food_name,
+                        "food_name" : food_name,
+                        "ingredient_name": nama_bahan,
                         "id_pangan": inserted_record.id_pangan,
                         "urt": float(inserted_record.urt),
                         "status": "Sukses Insert"
