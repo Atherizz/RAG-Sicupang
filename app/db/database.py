@@ -14,7 +14,7 @@ class DBService:
         self.DB_HOST = os.getenv("DB_HOST")
         self.DB_PORT = os.getenv("DB_PORT")
         self.mysql_url = f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-        self.engine = create_engine(self.mysql_url, echo=True)
+        self.engine = create_engine(self.mysql_url, echo=False)
         
     def get_sql_database(self):
         db = SQLDatabase.from_uri(self.mysql_url)

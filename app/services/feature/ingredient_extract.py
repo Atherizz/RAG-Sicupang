@@ -19,7 +19,7 @@ from decimal import Decimal
 
 class IngredientExtract:
     def __init__(self, model="gemini-2.5-flash"):
-        self.api_key = os.getenv("GOOGLE_API_KEY")
+        self.api_key = os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("API key tidak ditemukan")
 
@@ -57,10 +57,12 @@ class IngredientExtract:
             print(f"⚠️ Error: Estimasi porsi standar {food_name} adalah nol setelah RAG.")
             return []
 
+        # membagi porsi inputan dengan standar porsi yang ada pada suatu resep
         faktor_skala = portion_input / std_portion
         temp_results = []
 
         for bahan in bahan_parsed:
+            # mengambil json pada json bahan_parsed
             nama_bahan = bahan.get("nama_bahan", 0)
             berat_konsumsi = bahan.get("jumlah_standar", 0) * faktor_skala
             berat_per_urt = bahan.get("berat_per_urt", 0) 
@@ -70,6 +72,7 @@ class IngredientExtract:
                 print(f"⚠️ Error: Data porsi atau ID Pangan bahan tidak lengkap untuk {food_name}.")
                 continue
 
+            # perhitungan urt
             urt = berat_konsumsi / berat_per_urt
             urt_value = Decimal(str(urt)).quantize(Decimal('0.01')) 
 
@@ -168,7 +171,7 @@ class IngredientExtract:
                 urt=urt_value,
                 tanggal=today
                 )
-                
+        
                 
                 try:
                     inserted_record = await run_in_threadpool(
@@ -179,7 +182,7 @@ class IngredientExtract:
                     
                     temp_results.append({
                         "food_name" : food_name,
-                        "ingredient_name": nama_bahan,
+                        "ingredient_name": bahan_entry.nama_pangan,
                         "id_pangan": inserted_record.id_pangan,
                         "urt": float(inserted_record.urt),
                         "status": "Sukses Insert"
@@ -248,7 +251,6 @@ class IngredientExtract:
             session=session
             )
             
-            
             for item in uncached_items:
                 food_name = item.food_name.strip()
                 portion_input = item.portion
@@ -268,7 +270,7 @@ class IngredientExtract:
             
                     results.append(rag_insert_result)
                     
-        else:
+                else:
                     print(f"❌ Gagal mendapatkan hasil RAG untuk: {food_name}")
 
         return results
@@ -277,9 +279,16 @@ class IngredientExtract:
         combined_vdb_context = ""
         vdb_data_map = {} 
 
-        # 1. RETRIEVAL: Kumpulkan semua konteks VDB
         for food_name in food_names:
-            query_vector = await run_in_threadpool(self.embed_model.embed_query, food_name)
+            
+            query_base = re.sub(r'\b(nasi|ketupat|lontong|)\b', '', food_name, flags=re.IGNORECASE).strip()
+            
+            if not query_base or len(query_base) < 3:
+                query_vdb = food_name
+            else:
+                query_vdb = query_base
+            
+            query_vector = await run_in_threadpool(self.embed_model.embed_query, query_vdb)
             results = await run_in_threadpool(
                 self.vectorStore._index.query,
                 vector=query_vector,
@@ -287,7 +296,7 @@ class IngredientExtract:
                 namespace="recipes",
                 include_metadata=True
             )
-
+            
             if results['matches']:
                 first_match = results['matches'][0]
                 ingredients_text = first_match['metadata']['content']
@@ -313,23 +322,28 @@ class IngredientExtract:
 
         
         SYSTEM_INSTRUCTION = (
-            "Anda adalah asisten ahli nutrisi. Tugas Anda adalah memetakan semua resep yang diberikan "
-            "ke format data terstruktur JSON. Berikan HANYA satu objek JSON di seluruh output Anda. "
-            
-            "ATURAN PENENTUAN PORSI KRITIS: Nilai 'standar_porsi' harus merepresentasikan **TOTAL JUMLAH PORSI** (misal 4.0 porsi) "
-            "yang dihasilkan resep. Infer nilai ini secara logis berdasarkan **kuantitas total bahan utama** (misal: total 1 kg daging/ayam biasanya menghasilkan 4.0 porsi, 500 gram ayam menghasilkan 2.0 porsi). Jika sulit diinfer, gunakan nilai default 1.0. "
-            "Semua nilai 'jumlah_standar' di 'bahan_parsed' HARUS TOTAL BERAT BAHAN yang diperlukan untuk membuat "
-            "seluruh resep yang menghasilkan 'standar_porsi' tersebut. "
-            
-            "ATURAN KONVERSI KRITIS: Konversi kuantitas bahan sebagai berikut: "
-            "1. Satuan berat massal (cth: kg, ons, gr) HARUS dikonversi ke **gram (g)**. "
-            "2. Satuan volume (cth: liter, ml) HARUS dikonversi ke **mililiter (ml)**. "
-            "3. Satuan hitungan atau non-standar (cth: siung, biji, batang, secukupnya) HARUS dipertahankan sebagai satuan konversi. "
-            "4. Kasus Khusus: Jika satuan asli adalah 'piring' (biasanya untuk Nasi), konversi nilainya menjadi 200.0 gram. "
-            
-            "ATURAN STANDARISASI PENDAMPING (Nasi): Jika INPUT MAKANAN mencantumkan nasi TETAPI resep di VDB tidak mencantumkan Nasi, "
-            "TAMBAHKAN 'Nasi' ke dalam list bahan_parsed dengan: 'jumlah_standar': 200.0 dan 'satuan_konversi': 'g'."
-        )
+    "Anda adalah asisten ahli nutrisi. Tugas Anda adalah memetakan semua resep yang diberikan "
+    "ke format data terstruktur JSON. Berikan HANYA satu objek JSON di seluruh output Anda. "
+                
+    "ATURAN PENENTUAN PORSI KRITIS: Nilai 'standar_porsi' harus merepresentasikan **TOTAL JUMLAH PORSI** (misal 4.0 porsi) "
+    "yang dihasilkan resep. Infer nilai ini secara logis berdasarkan **kuantitas total bahan utama** (misal: total 1 kg daging/ayam biasanya menghasilkan 4.0 porsi, 500 gram ayam menghasilkan 2.0 porsi). Jika sulit diinfer, gunakan nilai default 1.0. "
+    "Semua nilai 'jumlah_standar' di 'bahan_parsed' HARUS TOTAL BERAT BAHAN yang diperlukan untuk membuat "
+    "seluruh resep yang menghasilkan 'standar_porsi' tersebut. "
+                
+    "ATURAN KONVERSI KRITIS: Konversi kuantitas bahan sebagai berikut: "
+    "1. Satuan berat massal (cth: kg, ons, gr) HARUS dikonversi ke **gram (g)**. "
+    "2. Satuan volume (cth: liter, ml) HARUS dikonversi ke **mililiter (ml)**. "
+    "3. Satuan hitungan atau non-standar (cth: siung, biji, batang, secukupnya) HARUS dipertahankan sebagai satuan konversi. "
+    "4. Kasus Khusus: Jika satuan asli adalah 'piring' (biasanya untuk Nasi), konversi nilainya menjadi 200.0 gram. "
+
+    "ATURAN ESTIMASI KUANTITAS BAHAN UTAMA (NON-STANDAR): "
+    "JIKA bahan utama (Daging, Ikan, Ayam, Tahu, Tempe, Santan/Kara) dicantumkan TANPA kuantitas berat terukur (misal hanya '1 ekor lele' atau '1 bungkus kara'), "
+    "LLM HARUS mengestimasi kuantitas standarnya dan mengonversinya ke **gram** untuk 'jumlah_standar', dan 'satuan_konversi' diisi dengan 'g'. "
+    "Contoh Estimasi Dasar: 1 ekor ikan/ayam sedang = 200.0 g; 1 bungkus santan/kara = 65.0 g. ESTIMASI INI WAJIB dilakukan untuk menghindari nilai 0.0 gram."
+    
+    "ATURAN ESTIMASI BUMBU ESENSIAL: "
+    "Untuk bumbu bubuk dan zat aditif yang dicantumkan sebagai 'secukupnya' atau tanpa kuantitas terukur (cth: Garam, Merica, Kaldu Bubuk, Ketumbar), LLM HARUS mengestimasi kuantitas minimal **2.0 gram** dan mengonversinya ke 'g'. ESTIMASI INI WAJIB dilakukan untuk menghindari nilai 0.0 gram."
+    )
 
         HUMAN_PROMPT = f"""
         Di bawah ini adalah daftar resep. Untuk setiap resep, ekstrak bahan-bahannya, konversi kuantitasnya 
@@ -346,7 +360,7 @@ class IngredientExtract:
         {{
             "hasil_analisis": [
                 {{
-                    "food_name_asli": "Nama Makanan Asli dari Konteks",
+                    "food_name_asli": "[AMBIL NAMA ASLI DARI INPUT MAKANAN DI ATAS]",
                     "resep_id_vdb": "ID VDB dari Konteks",
                     "standar_porsi": dari standarisasi berdasarkan banyaknya kuantitas bahan, 
                     "bahan_parsed": [
@@ -375,9 +389,29 @@ class IngredientExtract:
         try:
             bulk_data = json.loads(json_str)
             for item in bulk_data.get("hasil_analisis", []):
-                food_name = item.pop("food_name_asli", None)
-                if food_name in final_results:
-                    final_results[food_name] = item 
+                food_name_asli = item.pop("food_name_asli", None)
+                if food_name_asli and 'bahan_parsed' in item:
+                    is_carbo_dish = re.search(r'\b(nasi|ketupat|lontong)\b', food_name_asli, flags=re.IGNORECASE)
+                    
+                    has_main_carbo = any(
+                        re.search(r'\b(nasi|beras|ketupat|lontong|ubi|kentang)\b', bahan['nama_bahan'], flags=re.IGNORECASE)
+                        for bahan in item['bahan_parsed']
+                    )
+                    
+                    if is_carbo_dish and not has_main_carbo:
+                        print(f"Adding Nasi fallback to: {food_name_asli}")
+                    
+                        nasi_fallback = {
+                        "nama_bahan": "Beras Putih Mentah", 
+                        "jumlah_standar": 200.0, 
+                        "satuan_konversi": "g",
+                        }
+                    
+                        item['bahan_parsed'].insert(0, nasi_fallback)
+                    
+                    if food_name_asli in final_results:
+                        final_results[food_name_asli] = item
+
                     
         except json.JSONDecodeError as e:
             print(f":warning: Gagal parse JSON Massal: {e}")

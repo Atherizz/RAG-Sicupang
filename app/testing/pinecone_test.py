@@ -1,5 +1,6 @@
 from langchain_openai import OpenAIEmbeddings
 from pinecone import Pinecone
+import re
 import os
 from dotenv import load_dotenv
 
@@ -13,9 +14,11 @@ embed_model = OpenAIEmbeddings(
     openai_api_key=os.getenv("OPENAI_API_KEY")
 )
 
-# Generate embedding untuk query
-query_text = "nasi tongseng kambing"
-query_vector = embed_model.embed_query(query_text)
+
+food_name = "nasi rawon"
+query_base = re.sub(r'\b(nasi|ketupat|lontong|)\b', '', food_name, flags=re.IGNORECASE).strip()
+
+query_vector = embed_model.embed_query(query_base)
 
 # Query langsung ke Pinecone
 results = index.query(
@@ -25,7 +28,7 @@ results = index.query(
     include_metadata=True
 )
 
-print(f"Query: '{query_text}'")
+print(f"Query: '{query_base}'")
 print(f"Results found: {len(results['matches'])}")
 for match in results['matches']:
     print(f"\nScore: {match['score']}")
