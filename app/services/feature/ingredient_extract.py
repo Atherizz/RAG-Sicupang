@@ -341,8 +341,13 @@ class IngredientExtract:
     "LLM HARUS mengestimasi kuantitas standarnya dan mengonversinya ke **gram** untuk 'jumlah_standar', dan 'satuan_konversi' diisi dengan 'g'. "
     "Contoh Estimasi Dasar: 1 ekor ikan/ayam sedang = 200.0 g; 1 bungkus santan/kara = 65.0 g. ESTIMASI INI WAJIB dilakukan untuk menghindari nilai 0.0 gram."
     
-    "ATURAN ESTIMASI BUMBU ESENSIAL: "
-    "Untuk bumbu bubuk dan zat aditif yang dicantumkan sebagai 'secukupnya' atau tanpa kuantitas terukur (cth: Garam, Merica, Kaldu Bubuk, Ketumbar), LLM HARUS mengestimasi kuantitas minimal **2.0 gram** dan mengonversinya ke 'g'. ESTIMASI INI WAJIB dilakukan untuk menghindari nilai 0.0 gram."
+    "ATURAN KUANTIFIKASI WAJIB: "
+    "LLM WAJIB menghilangkan SEMUA placeholder non-numerik seperti 'secukupnya' atau 'seperlunya' dari kolom 'satuan_konversi' dan 'jumlah_standar'. "
+    "Untuk SEMUA bahan yang tidak memiliki kuantitas terukur di VDB, LLM HARUS mengestimasi nilainya ke dalam gram (g) atau satuan hitungan yang logis: "
+    "1. BAHAN UTAMA/PENGAYA (Ayam, Lele, Santan, Telur, Bihun): Estimasi 'jumlah_standar' berdasarkan kuantitas yang logis untuk resep total (misal: 1 ekor lele $\approx \text{200.0 g}$, 1 butir telur $\approx \text{60.0 g}$). Gunakan 'g' sebagai 'satuan_konversi'. "
+    "2. BUMBU ESENSIAL/BUBUK (Garam, Merica, Kaldu Bubuk): Estimasi minimal $\mathbf{2.0}$ $\text{gram}$ untuk 'jumlah_standar'. Gunakan 'g' sebagai 'satuan_konversi'. "
+    "3. BUMBU SATUAN HITUNG (Daun Salam, Serai): Estimasi berat berdasarkan standar $(\text{1.0 g}/\text{lembar}, \text{10.0 g}/\text{batang})$. Gunakan 'g' sebagai 'satuan_konversi'."
+    "KEWAJIBAN: PASTIKAN TIDAK ADA SATU PUN FIELD 'jumlah_standar' YANG BERISI 0.0, KECUALI JIKA BENAR-BENAR BUKAN BAHAN KONSUMSI."
     )
 
         HUMAN_PROMPT = f"""
@@ -350,7 +355,7 @@ class IngredientExtract:
         ke satuan standar, dan masukkan ke dalam struktur JSON tunggal. Gunakan 'NAMA MAKANAN ASLI' sebagai kunci utama.
         
         INPUT MAKANAN:
-        {food_name}
+        {food_names}
 
         KONTEKS RESEP YANG DISEDIAKAN:
         {combined_vdb_context}
@@ -358,20 +363,23 @@ class IngredientExtract:
         FORMAT JSON YANG DIHARAPKAN:
 
         {{
-            "hasil_analisis": [
-                {{
-                    "food_name_asli": "[AMBIL NAMA ASLI DARI INPUT MAKANAN DI ATAS]",
-                    "resep_id_vdb": "ID VDB dari Konteks",
-                    "standar_porsi": dari standarisasi berdasarkan banyaknya kuantitas bahan, 
-                    "bahan_parsed": [
-                        {{
-                            "nama_bahan": "nama bahan yang diekstrak",
-                            "jumlah_standar": 0.0
-                            "satuan_konversi": "satuan asli (contoh: kg, siung, sdm)"
-                        }}
-                    ]
-                }}
-            ]
+            "[NAMA MAKANAN ASLI PERTAMA]": {{
+                "resep_id_vdb": "ID VDB dari Konteks",
+                "standar_porsi": dari standarisasi berdasarkan banyaknya kuantitas bahan, 
+                "bahan_parsed": [
+                    {{
+                        "nama_bahan": "nama bahan yang diekstrak",
+                        "jumlah_standar": 0.0,
+                        "satuan_konversi": "satuan asli (contoh: kg, siung, sdm)",
+                    }}
+                ]
+            }},
+            "[NAMA MAKANAN ASLI KEDUA]": {{
+                "resep_id_vdb": "ID VDB dari Konteks",
+                "standar_porsi": dari standarisasi berdasarkan banyaknya kuantitas bahan, 
+                "bahan_parsed": [ ... ]
+            }}
+            // ... LANJUTKAN UNTUK SEMUA NAMA MAKANAN DI INPUT ...
         }}
         
         Berikan HANYA objek JSON, tanpa teks penjelasan apa pun.
@@ -388,29 +396,33 @@ class IngredientExtract:
         
         try:
             bulk_data = json.loads(json_str)
-            for item in bulk_data.get("hasil_analisis", []):
-                food_name_asli = item.pop("food_name_asli", None)
-                if food_name_asli and 'bahan_parsed' in item:
+            for food_name_asli in food_names:
+                resep_data = bulk_data.get(food_name_asli)
+                
+                if resep_data and 'bahan_parsed' in resep_data:
+                    bahan_parsed = resep_data['bahan_parsed']
                     is_carbo_dish = re.search(r'\b(nasi|ketupat|lontong)\b', food_name_asli, flags=re.IGNORECASE)
                     
                     has_main_carbo = any(
-                        re.search(r'\b(nasi|beras|ketupat|lontong|ubi|kentang)\b', bahan['nama_bahan'], flags=re.IGNORECASE)
-                        for bahan in item['bahan_parsed']
+                    re.search(r'\b(nasi|beras|ketupat|lontong|ubi|kentang)\b', bahan['nama_bahan'], flags=re.IGNORECASE)
+                    for bahan in bahan_parsed
                     )
                     
                     if is_carbo_dish and not has_main_carbo:
                         print(f"Adding Nasi fallback to: {food_name_asli}")
-                    
                         nasi_fallback = {
-                        "nama_bahan": "Beras Putih Mentah", 
-                        "jumlah_standar": 200.0, 
-                        "satuan_konversi": "g",
+                            "nama_bahan": "Beras Putih Mentah", 
+                            "jumlah_standar": 200.0, 
+                            "satuan_konversi": "g",
                         }
-                    
-                        item['bahan_parsed'].insert(0, nasi_fallback)
-                    
-                    if food_name_asli in final_results:
-                        final_results[food_name_asli] = item
+                        
+                        resep_data['bahan_parsed'].insert(0, nasi_fallback)
+
+                    final_results[food_name_asli] = resep_data
+                
+                else:
+                    final_results[food_name_asli] = None 
+
 
                     
         except json.JSONDecodeError as e:
