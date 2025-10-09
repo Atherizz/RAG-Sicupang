@@ -3,21 +3,23 @@ fastapi==0.115.0
 uvicorn[standard]==0.32.0
 python-dotenv==1.0.1
 
-# Database
+# Database & ORM
+sqlmodel==0.0.22
+sqlalchemy>=2.0,<3.0
 pymysql==1.1.1
-sqlmodel
 cryptography==43.0.1
 
-# AI/ML
+# AI/ML + LLM integrations
 langchain==0.3.7
-langchain_google_genai==2.0.4
-langchain_openai==0.2.9
-langchain_pinecone
-datasets==3.1.0
+langchain-openai==0.2.9
+langchain-google-genai==2.0.4
+langchain-pinecone==0.1.1
+openai>=1.51.0
+google-generativeai>=0.8.3
 pinecone-client==5.0.1
 
-# Data Processing
+# NLP/Data utilities
+datasets==3.1.0
 pandas==2.2.3
 fuzzywuzzy==0.18.0
-# Hapus versi atau coba hapus seluruhnya jika masih gagal:
-python-levenshtein
+python-levenshtein==0.25.1

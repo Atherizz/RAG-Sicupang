@@ -10,7 +10,6 @@ class DBService:
         self.DB_PASSWORD = os.getenv("DB_PASSWORD")
         self.DB_NAME = os.getenv("DB_NAME")
         
-
         self.INSTANCE_CONNECTION_NAME = os.getenv("INSTANCE_CONNECTION_NAME")
         
         if self.INSTANCE_CONNECTION_NAME:
