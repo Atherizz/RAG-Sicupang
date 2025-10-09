@@ -6,7 +6,6 @@ from sqlmodel import Session
 from datetime import date
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.schema import SystemMessage, HumanMessage
-from app.db.database import DBService
 from app.db.models.household_food import HouseholdFood, InsertHouseholdFood
 from app.db.models.food_recipe import get_resep_by_nama, InsertFoodRecipe, FoodRecipe
 from app.db.models.food_ingredient import get_pangan_by_nama_fuzzy
@@ -30,7 +29,6 @@ class IngredientExtract:
 
         self.index_name = "sicupang-rag-small"
         self.namespace = "recipes"
-        self.db = DBService()
 
         self.embed_model = OpenAIEmbeddings(model="text-embedding-3-small")
         self.vectorStore = PineconeVectorStore(
