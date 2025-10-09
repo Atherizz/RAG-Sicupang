@@ -1,23 +1,8 @@
 from typing import Optional
-from datetime import date
-from decimal import Decimal
 from datetime import datetime
 from sqlmodel import SQLModel, Field
 from sqlalchemy import Column, Enum as SQLEnum
 from sqlalchemy.types import Numeric, Date
-
-# class Konfirmasi(str, SQLEnum):
-#     Ya = "Ya"
-#     Tidak = "Tidak"
-    
-# class StatusKeluarga(str, SQLEnum):
-#     MENUNGGU = "MENUNGGU"
-#     DITERIMA = "DITERIMA"
-#     DITOLAK = "DITOLAK"
-
-# # Ambil list nilai string dari Enum yang sudah didefinisikan
-# KONFIRMASI_VALUES = [member.value for member in Konfirmasi]
-# STATUS_KELUARGA_VALUES = [member.value for member in StatusKeluarga]
 
 
 class Family(SQLModel, table=True):

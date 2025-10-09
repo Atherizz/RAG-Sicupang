@@ -3,8 +3,6 @@ from sqlmodel import Session
 from app.schemas.request_model import FoodBatchRequest, FoodExtract
 from app.db.database import DBService
 from app.services.feature.ingredient_extract import IngredientExtract
-from pydantic import BaseModel
-from typing import List
 
 router = APIRouter()
 db = DBService()
