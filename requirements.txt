@@ -1,25 +1,22 @@
-# Core
-fastapi==0.115.0
-uvicorn[standard]==0.32.0
-python-dotenv==1.0.1
+# === Backend & Server ===
+fastapi>=0.115.0,<0.116.0
+uvicorn==0.23.0
+python-dotenv==1.1.1
 
-# Database & ORM
-sqlmodel==0.0.22
-sqlalchemy>=2.0,<3.0
-pymysql==1.1.1
-cryptography==43.0.1
+# === Database ===
+# Menghapus pin SQLAlchemy 1.4 yang konflik.
+# SQLModel akan secara otomatis menarik versi SQLAlchemy 2.0+ yang benar.
+sqlmodel==0.0.27
+psycopg2-binary==2.9.8
 
-# AI/ML + LLM integrations
-langchain==0.3.7
-langchain-openai==0.2.9
-langchain-google-genai==2.0.4
-langchain-pinecone==0.1.1
-openai>=1.51.0
-google-generativeai>=0.8.3
-pinecone-client==5.0.1
+# === LangChain & AI Providers ===
+# Mengupdate versi LangChain ke skema modern agar konsisten
+langchain>=0.2.0
+langchain-openai>=0.1.0
+langchain-pinecone==0.2.12
+pinecone-client>=3.2.2,<4.0.0
 
-# NLP/Data utilities
-datasets==3.1.0
-pandas==2.2.3
+# === Utilities ===
+pydantic>=2.12.0,<2.13.0
 fuzzywuzzy==0.18.0
-python-levenshtein==0.25.1
+python-Levenshtein==0.27.1

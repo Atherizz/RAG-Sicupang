@@ -71,11 +71,12 @@ class IngredientExtract:
                 continue
 
             # perhitungan urt
-            urt = berat_konsumsi / berat_per_urt
-            urt_value = Decimal(str(urt)).quantize(Decimal('0.01')) 
+            urt = berat_konsumsi / float(berat_per_urt)
+            urt_value = round(urt, 2) 
 
             bahan_pangan = HouseholdFood(
                 id_keluarga=id_keluarga,
+                nama_bahan=nama_bahan,
                 id_pangan=id_pangan,
                 urt=urt_value,
                 tanggal=today
@@ -150,21 +151,22 @@ class IngredientExtract:
                     print(f"⚠️ Error: Data porsi atau ID Pangan bahan tidak lengkap untuk {food_name}.")
                     continue
 
-                urt = berat_konsumsi / berat_per_urt
-                urt_value = Decimal(str(urt)).quantize(Decimal('0.01'))
+                urt = berat_konsumsi / float(berat_per_urt)
+                urt_value = round(urt, 2) 
                 
                 bahan_enriched = {
                 "nama_bahan": nama_bahan,
                 "jumlah_standar": jumlah_standar,
                 "satuan_konversi": satuan_konversi,
                 "id_pangan": id_pangan,
-                "berat_per_urt": berat_per_urt 
+                "berat_per_urt": float(berat_per_urt)
                 }
                 
                 uraian_bahan_json['bahan_parsed'].append(bahan_enriched) 
                 
                 new_pangan_keluarga = HouseholdFood(
                 id_keluarga=id_keluarga,
+                nama_bahan=nama_bahan,
                 id_pangan=id_pangan,
                 urt=urt_value,
                 tanggal=today

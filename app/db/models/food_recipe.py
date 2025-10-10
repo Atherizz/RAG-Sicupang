@@ -11,7 +11,7 @@ class FoodRecipe(SQLModel, table=True):
 
     id_resep_makanan: Optional[int] = Field(default=None, primary_key=True)
     nama_olahan: str = Field(index=True, unique=True)
-    id_resep_vektor_db: str = Field(sa_column_kwargs={"nullable": False})
+    id_resep_vektor_db: str = Field(sa_column_kwargs={"nullable": False},  index=True)
     uraian_bahan: dict = Field(sa_column=Column(JSON)) 
     standar_porsi: float
     created_at: datetime = Field(default_factory=datetime.utcnow)

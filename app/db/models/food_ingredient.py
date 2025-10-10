@@ -20,8 +20,9 @@ class FoodIngredient(SQLModel, table=True):
     id_pangan: Optional[int] = Field(default=None, primary_key=True)
 
     nama_pangan: str = Field(
-        sa_column=Column(String(191), nullable=False)
-    )
+    sa_column=Column(String(191), index=True, nullable=False) 
+    )   
+
 
     gram: Decimal = Field(sa_column=Column(Numeric(10, 2), nullable=False))
     kalori: Decimal = Field(sa_column=Column(Numeric(10, 2), nullable=False))
@@ -77,18 +78,6 @@ def get_pangan_by_nama_fuzzy(nama_pangan: str, session: Session) -> Optional[Foo
     if score >= FUZZY_SCORE_THRESHOLD: 
         statement = select(FoodIngredient).where(FoodIngredient.nama_pangan == best_name)
         return session.exec(statement).first()
-    else:
-        return None
-
-def get_pangan_by_nama_like(nama_pangan: str, session: Session) -> Optional[List['FoodIngredient']]:
-    search_pattern = f"%{nama_pangan}%"
-
-    statement = select(FoodIngredient).where(FoodIngredient.nama_pangan.ilike(search_pattern))
-    
-    results: List['FoodIngredient'] = session.exec(statement).all()
-    
-    if results:
-        return results
     else:
         return None
 
