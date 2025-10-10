@@ -1,29 +1,33 @@
-# app/db/database.py
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import create_engine, Session, SQLModel
+from langchain_community.utilities import SQLDatabase
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
 class DBService:
-    def __init__(self) -> None:
-        url = os.getenv("DATABASE_URL")
-        if not url:
-            raise RuntimeError("DATABASE_URL tidak ditemukan di environment")
-
-        if url.startswith("postgres://"):
-            url = url.replace("postgres://", "postgresql+psycopg2://", 1)
-
-        self.engine = create_engine(
-            url,
-            echo=False,
-            pool_pre_ping=True,   # auto test koneksi (hindari 'server closed the connection')
-            pool_recycle=3600,    # recycle tiap 1 jam (aman untuk provider managed)
-            # connect_args={}      # biasanya tidak perlu; sslmode di URL sudah cukup
-        )
-
+    def __init__(self):
+        # Gunakan DATABASE_URL langsung dari environment
+        self.database_url = os.getenv("DATABASE_URL")
+        
+        if not self.database_url:
+            raise ValueError("DATABASE_URL environment variable is not set")
+        
+        # Pastikan menggunakan driver yang benar untuk PostgreSQL
+        # Ganti 'postgres://' dengan 'postgresql://' jika perlu (untuk compatibility)
+        if self.database_url.startswith("postgres://"):
+            self.database_url = self.database_url.replace("postgres://", "postgresql://", 1)
+        
+        self.engine = create_engine(self.database_url, echo=False)
+        
+    def get_sql_database(self):
+        db = SQLDatabase.from_uri(self.database_url)
+        return db
+    
     def get_session(self):
-        """Dipakai di FastAPI: Depends(db.get_session)"""
         with Session(self.engine) as session:
             yield session
-
+            
+    def create_db_and_tables(self):
+        SQLModel.metadata.create_all(self.engine)
+        
