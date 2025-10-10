@@ -3,8 +3,8 @@ from decimal import Decimal
 from sqlmodel import SQLModel, Field, Session, select
 from sqlalchemy import Column, String, Index
 from sqlalchemy.types import Numeric
-from fuzzywuzzy import fuzz
-from fuzzywuzzy import process 
+from thefuzz import fuzz
+from thefuzz import process
 
 
 _CACHED_PANGAN_NAMES: Optional[List[str]] = None
